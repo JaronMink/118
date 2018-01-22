@@ -1,3 +1,4 @@
+
 /* A simple server in the internet domain using TCP
    The port number is passed as an argument
    This version runs forever, forking off a separate
@@ -6,17 +7,57 @@
 #include <stdio.h>
 #include <sys/types.h>   // definitions of a number of data types used in socket.h and netinet/in.h
 #include <sys/socket.h>  // definitions of structures needed for sockets, e.g. sockaddr
+#include <sys/stat.h>    // structures for stat
 #include <netinet/in.h>  // constants and structures needed for internet domain addresses, e.g. sockaddr_in
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>  /* signal name macros, and the kill() prototype */
-
+#include <fcntl.h>
+#include <string.h>
 
 void error(char *msg)
 {
-    perror(msg);
-    exit(1);
+  perror(msg);
+  exit(1);
+}
+
+void readFileContent(int fileFD, char** content, int* contentLen) {
+  struct stat st;
+  if(fstat(fileFD, &st) < 0) {
+    error("ERROT: cannot read requested files stats");
+  }
+  
+  int fileLen = st.st_size; //byte size of file                                                                                                                
+  char* fileStr = (char*) malloc(sizeof(char) * fileLen);
+  
+  int bytesTotal = 0;
+  int bytesRead;
+  while((bytesRead = read(fileFD, (fileStr + bytesTotal), fileLen)) > 0) {
+    bytesTotal += bytesRead;
+  }
+  if(bytesRead < 0) {
+    error("ERROR: cannot read from specified file");
+  }
+
+  //return contents and length                                                                                                                                  
+  *content = fileStr;
+  *contentLen = fileLen;
+  return;
+}
+
+
+void sendFileContent(int sockFD, int fileFD) {
+  char* fileContent = NULL;
+  int fileLen = -1;
+  readFileContent(fileFD, &fileContent, &fileLen);
+  write(sockFD, fileContent, fileLen); //might have to be put into while loop for large files                                             
+  //writeFileContent(fileContent, fileLen);                                                                                               
+}
+
+void send404Error(int socketFD) {
+  char* error404Msg = "Error 404, resource not found";
+  write(socketFD, error404Msg, strlen(error404Msg)); 
 }
 
 int main(int argc, char *argv[])
@@ -61,7 +102,17 @@ int main(int argc, char *argv[])
     n = read(newsockfd, buffer, 255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n", buffer);
-
+    
+    char * requestedFile = "test.txt";
+    int requestedFD;
+    if((requestedFD = open(requestedFile, O_RDONLY)) < 0) {
+      send404Error(newsockfd);
+    } else {
+      sendFileContent(newsockfd, requestedFD);
+    }
+    
+    
+    
     //reply to client
     n = write(newsockfd, "I got your message", 18);
     if (n < 0) error("ERROR writing to socket");
