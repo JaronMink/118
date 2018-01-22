@@ -15,6 +15,7 @@
 #include <signal.h>  /* signal name macros, and the kill() prototype */
 #include <fcntl.h>
 #include <string.h>
+#include <time.h>
 
 void error(char *msg)
 {
@@ -102,19 +103,81 @@ int main(int argc, char *argv[])
     n = read(newsockfd, buffer, 255);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n", buffer);
+	
+    char file_path[256];
+
+    // tokenize to get every spaced word
+    char *saveptr_line, *saveptr_word;
+    char *line, *word;
+    char* request_lines = buffer;
+    char line_tok[2] = "\n";
+    line_tok[1] = 0;
+    char word_tok[2] = " ";
+    word_tok[1] = 0;
+
+    for (int i = 0; ; i++, request_lines = NULL)
+    {
+      line = strtok_r(request_lines, line_tok, &saveptr_line);
+      if (line == NULL)
+	break;
+      //printf("%s\n\n", line);
+      for (int j = 0; ; j++, line = NULL) {
+	word = strtok_r(line, word_tok, &saveptr_word);
+	if (word == NULL)
+	  break;
+
+	if (i == 0) // header line
+	{
+	  if (j == 0){
+	    if (strcmp("GET", word) == 0)
+	      {
+	    
+	      }
+	    else
+	      {
+	    
+	      }
+	  }
+	  if (j == 1){
+	    strcpy(file_path, word);
+	  }
+	  if (j == 2){
+	    if (strcmp ("HTTP/1.0", word) != 0)
+	      {	
+		//error("ERROR only supports HTTP 1.0.");
+		//close(newsockfd);
+		//close(sockfd);
+	      }
+	  }
+	}
+	//printf("%s ", word);
+      }
+      printf("\n");
+    }
     
-    char * requestedFile = "test.txt";
+    char response[1024];
+    char date_text[512];
+    time_t now = time(0);
+    struct tm tm = *gmtime(&now);
+    strftime(date_text, sizeof(date_text), "%a, %d %b %Y %H:%M:%S %Z", &tm);
+    struct stat attr;
+    char last_modified[512];
+    stat(file_path, &attr);
+    strftime(last_modified, sizeof(last_modified), "%a, %d %b %Y %H:%M:%S%Z", gmtime(&(attr.st_ctime)));struct stat attr;
+    char last_modified[512];
+    char format_str = "HTTP/1.0 200 OK\nDate: %s\nServer: localhost\nMIME-version: 1.0\nLast-Modified: %s", date_text, last_modified);
+    sprintf(response, format_str, date_text);
+
+    printf("%s", response);
+    
     int requestedFD;
-    if((requestedFD = open(requestedFile, O_RDONLY)) < 0) {
+    if((requestedFD = open("test.txt", O_RDONLY)) < 0) {
       send404Error(newsockfd);
     } else {
       sendFileContent(newsockfd, requestedFD);
     }
     
-    
-    
     //reply to client
-    n = write(newsockfd, "I got your message", 18);
     if (n < 0) error("ERROR writing to socket");
 
     close(newsockfd);  // close connection
