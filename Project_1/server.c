@@ -1,4 +1,3 @@
-
 /* A simple server in the internet domain using TCP
    The port number is passed as an argument
    This version runs forever, forking off a separate
@@ -34,12 +33,12 @@ void readFileContent(int fileFD, char** content, int* contentLen) {
 
   int bytesTotal = 0;
   int bytesRead;
-  while((bytesRead = read(fileFD, (fileStr + bytesTotal), fileLen)) > 0) {
+  while((bytesRead = read(fileFD, (fileStr + bytesTotal), fileLen - bytesRead)) > 0) {
     bytesTotal += bytesRead;
   }
   if(bytesRead < 0) {
     error("ERROR: cannot read from specified file");
-  }
+    }
 
   //return contents and length
   *content = fileStr;
@@ -58,7 +57,13 @@ void sendFileContent(int sockFD, int fileFD, char* httpResponse) {
   char* fullResponse = (char*) malloc(sizeof(char) * (fileLen + strlen(httpResponse)));
   sprintf(fullResponse, httpResponse, fileLen);
   strcat(fullResponse, fileContent);
-  write(sockFD, fullResponse, strlen(fullResponse)); //might have to be put into while loop for large files
+  /*for (int i = 0; i < strlen(httpResponse)+fileLen; i++)
+    {
+      write(sockFD, fullResponse+i, 1); //might have to be put into while loop for large files
+      }*/
+  write(sockFD, httpResponse, strlen(httpResponse));
+  write(sockFD, fileContent, fileLen);
+  
   //writeFileContent(fileContent, fileLen);
 }
 
@@ -159,7 +164,36 @@ int main(int argc, char *argv[])
       	//printf("%s ", word);
       }
     }
+    char file_path_spaces[256];
+    for (int i = 0; i < strlen(file_path); i++) {
+      char three_chars[256];
+      strcpy(three_chars, file_path+i);
+      three_chars[3] = '\0';
+      if (strcmp(three_chars, "%20") == 0) {
+	i+=2;
+	strcat(file_path_spaces, " ");
+      }
+      else {
+	char non_space_char[2];
+	sprintf(non_space_char, "%c", file_path[i]);
+	strcat(file_path_spaces, non_space_char);
+      }
+    }
 
+    char* file_ext;
+    char* file_index = file_path_spaces+1;
+    for (int i = 0; i < strlen(file_index); i++)
+      {
+	if (file_index[i] == '.')
+	  {
+	    file_ext = file_index+i+1;
+	    break;
+	  }
+      }
+    printf("file_ext: %s\n", file_ext);
+    printf("file_path: %s\n", file_path);
+    printf("file_path_spaces: %s\n", file_path_spaces);
+    
     char response[1024];
     char date_text[512];
     time_t now = time(0);
@@ -174,11 +208,25 @@ int main(int argc, char *argv[])
     strcat(format_str, "Server: localhost\n");
     strcat(format_str, "MIME-version: 1.0\n");
     strcat(format_str, "Last-Modified: %s\n");
-    strcat(format_str, "Content-Type: text/html\n");
+    char* mime_type;
+    if (strcmp(file_ext, "html") == 0)
+      {
+	mime_type = "text/html";
+      }
+    else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
+      {
+	mime_type = "image/jpeg";
+      }
+    else if (strcmp(file_ext, "png") == 0)
+      {
+	mime_type = "image/png";
+      }
+    // jpeg gif jpg png html htm txt
+    strcat(format_str, "Content-Type: image.png\n");
     sprintf(response, format_str, date_text, last_modified, attr.st_size);
 
     int requestedFD;
-    if((requestedFD = open(file_path+1, O_RDONLY)) < 0) {
+    if((requestedFD = open(file_index, O_RDONLY)) < 0) {
       send404Error(newsockfd);
     } else {
       sendFileContent(newsockfd, requestedFD, response);
