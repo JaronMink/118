@@ -55,25 +55,17 @@ void sendFileContent(int sockFD, int fileFD, char* httpResponse) {
   sprintf(content_len_str, "Content-Length: %i\n", fileLen);
   strcat(httpResponse, content_len_str);
   strcat(httpResponse, "\n");
-  strcat(httpResponse, "");
-  char* fullResponse = (char*) malloc(sizeof(char) * (fileLen + strlen(httpResponse)));
-  sprintf(fullResponse, httpResponse, fileLen);
-  strcat(fullResponse, fileContent);
   write(sockFD, httpResponse, strlen(httpResponse));
   write(sockFD, fileContent, fileLen);
-
-  printf("\n\n%s\n%s", httpResponse, fileContent);
 }
 
 void send404Error(int socketFD, char* httpResponse) {
   char* error404Msg = "Error 404, resource not found";
-  write(socketFD, httpResponse, strlen(httpResponse));
   char content_len_str[100];
-  sprintf(content_len_str, "Content-Length: %i\n", strlen(error404Msg));
+  sprintf(content_len_str, "Content-Length: %zd\n\n", strlen(error404Msg));
+  write(socketFD, httpResponse, strlen(httpResponse));
   write(socketFD, content_len_str, strlen(content_len_str));
   write(socketFD, error404Msg, strlen(error404Msg));
-
-  printf("\n\n%s\n%s", httpResponse, error404Msg);
 }
 
 int main(int argc, char *argv[])
@@ -110,12 +102,12 @@ int main(int argc, char *argv[])
      error("ERROR on accept");
 
     int n;
-    char buffer[256];
+    char buffer[512];
 
-    memset(buffer, 0, 256);  // reset memory
+    memset(buffer, 0, 512);  // reset memory
 
     //read client's message
-    n = read(newsockfd, buffer, 255);
+    n = read(newsockfd, buffer, 511);
     if (n < 0) error("ERROR reading from socket");
     printf("Here is the message: %s\n", buffer);
 
@@ -135,7 +127,6 @@ int main(int argc, char *argv[])
       line = strtok_r(request_lines, line_tok, &saveptr_line);
       if (line == NULL)
 	     break;
-      //printf("%s\n\n", line);
       for (int j = 0; ; j++, line = NULL) {
       	word = strtok_r(line, word_tok, &saveptr_word);
       	if (word == NULL)
@@ -165,7 +156,6 @@ int main(int argc, char *argv[])
       	      }
       	  }
       	}
-      	//printf("%s ", word);
       }
     }
     char file_path_spaces[256];
@@ -173,15 +163,14 @@ int main(int argc, char *argv[])
       char three_chars[256];
       strcpy(three_chars, file_path+i);
       three_chars[3] = '\0';
-      //printf("%s\n", three_chars);
       if (strcmp(three_chars, "%20") == 0) {
-	i+=2;
-	strcat(file_path_spaces, " ");
+      	i += 2;
+      	strcat(file_path_spaces, " ");
       }
       else {
-	char non_space_char[2];
-	sprintf(non_space_char, "%c", file_path[i]);
-	strcat(file_path_spaces, non_space_char);
+      	char non_space_char[2];
+      	sprintf(non_space_char, "%c", file_path[i]);
+      	strcat(file_path_spaces, non_space_char);
       }
     }
 
@@ -189,16 +178,13 @@ int main(int argc, char *argv[])
     char* file_index = file_path_spaces+1;
     for (int i = 0; i < strlen(file_index); i++)
       {
-	if (file_index[i] == '.')
-	  {
-	    file_ext = file_index+i+1;
-	    break;
-	  }
+      	if (file_index[i] == '.')
+      	  {
+      	    file_ext = file_index+i+1;
+      	    break;
+      	  }
       }
-    printf("file_ext: %s\n", file_ext);
-    printf("file_path: %s\n", file_path);
-    printf("file_path_spaces: %s\n", file_path_spaces);
-    
+
     char response[1024];
     char date_text[512];
     time_t now = time(0);
@@ -206,7 +192,7 @@ int main(int argc, char *argv[])
     strftime(date_text, sizeof(date_text), "%a, %d %b %Y %H:%M:%S %Z", &tm);
     struct stat attr;
     char last_modified[512];
-    stat(file_path+1, &attr);
+    stat(file_index, &attr);
     strftime(last_modified, sizeof(last_modified), "%a, %d %b %Y %H:%M:%S %Z", gmtime(&(attr.st_mtime)));
     char format_str[512] = "HTTP/1.0 200 OK\n";
     strcat(format_str, "Date: %s\n");
@@ -215,50 +201,39 @@ int main(int argc, char *argv[])
     strcat(format_str, "Last-Modified: %s\n");
     char* mime_type;
     if (strcmp(file_ext, "html") == 0)
-      {
-	mime_type = "text/html";
-      }
+      	mime_type = "text/html";
     else if (strcmp(file_ext, "htm") == 0)
-      {
-	mime_type = "text/htm";
-      }
+      	mime_type = "text/htm";
     else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
-      {
-	mime_type = "image/jpeg";
-      }
+      	mime_type = "image/jpeg";
     else if (strcmp(file_ext, "png") == 0)
-      {
-	mime_type = "image/png";
-      }
+      	mime_type = "image/png";
     else if (strcmp(file_ext, "gif") == 0)
-      {
-	mime_type = "image/gif";
-      }
+        mime_type = "image/gif";
     else if (strcmp(file_ext, "txt") == 0)
-      {
-	mime_type = "text/txt";
-      }
-    
-    // jpeg gif jpg png html htm txt
+      	mime_type = "text/txt";
+
     char content_type_str[50];
     sprintf(content_type_str, "Content-Type: %s\n", mime_type);
     strcat(format_str, content_type_str);
     strcat(format_str, "Expires: 0\n");
     sprintf(response, format_str, date_text, last_modified, attr.st_size);
 
-    char err_format_str[512] = "HTTP/1.0 404 Not Found\n";
+    char err_format_str[512] = "HTTP/1.0 200 OK\n";
     strcat(err_format_str, "Date: %s\n");
     strcat(err_format_str, "Server: localhost\n");
+    strcat(err_format_str, "MIME-version: 1.0\n");
+    strcat(err_format_str, "Last-Modified: %s\n");
+    strcat(err_format_str, "Content-Type: text/html\n");
+    strcat(err_format_str, "Expires: 0\n");
     char err_response[1024];
-    sprintf(err_response, err_format_str, date_text);
+    sprintf(err_response, err_format_str, date_text, date_text);
 
     int requestedFD;
     if((requestedFD = open(file_index, O_RDONLY)) < 0) {
       send404Error(newsockfd, err_response);
-      printf("404: %s", err_response);
     } else {
       sendFileContent(newsockfd, requestedFD, response);
-      printf("Normal: %s", response);
     }
 
     //reply to client
