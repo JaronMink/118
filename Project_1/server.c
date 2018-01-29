@@ -51,25 +51,29 @@ void sendFileContent(int sockFD, int fileFD, char* httpResponse) {
   char* fileContent = NULL;
   int fileLen = -1;
   readFileContent(fileFD, &fileContent, &fileLen);
-  strcat(httpResponse, "Content-Length: %i\n");
+  char content_len_str[50];
+  sprintf(content_len_str, "Content-Length: %i\n", fileLen);
+  strcat(httpResponse, content_len_str);
   strcat(httpResponse, "\n");
   strcat(httpResponse, "");
   char* fullResponse = (char*) malloc(sizeof(char) * (fileLen + strlen(httpResponse)));
   sprintf(fullResponse, httpResponse, fileLen);
   strcat(fullResponse, fileContent);
-  /*for (int i = 0; i < strlen(httpResponse)+fileLen; i++)
-    {
-      write(sockFD, fullResponse+i, 1); //might have to be put into while loop for large files
-      }*/
   write(sockFD, httpResponse, strlen(httpResponse));
   write(sockFD, fileContent, fileLen);
-  
-  //writeFileContent(fileContent, fileLen);
+
+  printf("\n\n%s\n%s", httpResponse, fileContent);
 }
 
-void send404Error(int socketFD) {
+void send404Error(int socketFD, char* httpResponse) {
   char* error404Msg = "Error 404, resource not found";
+  write(socketFD, httpResponse, strlen(httpResponse));
+  char content_len_str[100];
+  sprintf(content_len_str, "Content-Length: %i\n", strlen(error404Msg));
+  write(socketFD, content_len_str, strlen(content_len_str));
   write(socketFD, error404Msg, strlen(error404Msg));
+
+  printf("\n\n%s\n%s", httpResponse, error404Msg);
 }
 
 int main(int argc, char *argv[])
@@ -169,6 +173,7 @@ int main(int argc, char *argv[])
       char three_chars[256];
       strcpy(three_chars, file_path+i);
       three_chars[3] = '\0';
+      //printf("%s\n", three_chars);
       if (strcmp(three_chars, "%20") == 0) {
 	i+=2;
 	strcat(file_path_spaces, " ");
@@ -213,6 +218,10 @@ int main(int argc, char *argv[])
       {
 	mime_type = "text/html";
       }
+    else if (strcmp(file_ext, "htm") == 0)
+      {
+	mime_type = "text/htm";
+      }
     else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
       {
 	mime_type = "image/jpeg";
@@ -221,15 +230,35 @@ int main(int argc, char *argv[])
       {
 	mime_type = "image/png";
       }
+    else if (strcmp(file_ext, "gif") == 0)
+      {
+	mime_type = "image/gif";
+      }
+    else if (strcmp(file_ext, "txt") == 0)
+      {
+	mime_type = "text/txt";
+      }
+    
     // jpeg gif jpg png html htm txt
-    strcat(format_str, "Content-Type: image.png\n");
+    char content_type_str[50];
+    sprintf(content_type_str, "Content-Type: %s\n", mime_type);
+    strcat(format_str, content_type_str);
+    strcat(format_str, "Expires: 0\n");
     sprintf(response, format_str, date_text, last_modified, attr.st_size);
+
+    char err_format_str[512] = "HTTP/1.0 404 Not Found\n";
+    strcat(err_format_str, "Date: %s\n");
+    strcat(err_format_str, "Server: localhost\n");
+    char err_response[1024];
+    sprintf(err_response, err_format_str, date_text);
 
     int requestedFD;
     if((requestedFD = open(file_index, O_RDONLY)) < 0) {
-      send404Error(newsockfd);
+      send404Error(newsockfd, err_response);
+      printf("404: %s", err_response);
     } else {
       sendFileContent(newsockfd, requestedFD, response);
+      printf("Normal: %s", response);
     }
 
     //reply to client
