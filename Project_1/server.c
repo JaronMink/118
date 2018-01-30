@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    char* file_ext;
+    char* file_ext = NULL;
     char* file_index = file_path_spaces+1;
     for (int i = 0; i < strlen(file_index); i++)
       {
@@ -200,18 +200,22 @@ int main(int argc, char *argv[])
     strcat(format_str, "MIME-version: 1.0\n");
     strcat(format_str, "Last-Modified: %s\n");
     char* mime_type;
-    if (strcmp(file_ext, "html") == 0)
-      	mime_type = "text/html";
-    else if (strcmp(file_ext, "htm") == 0)
-      	mime_type = "text/htm";
-    else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
-      	mime_type = "image/jpeg";
-    else if (strcmp(file_ext, "png") == 0)
-      	mime_type = "image/png";
-    else if (strcmp(file_ext, "gif") == 0)
-        mime_type = "image/gif";
-    else if (strcmp(file_ext, "txt") == 0)
-      	mime_type = "text/txt";
+    if (file_ext != NULL) {
+      if (strcmp(file_ext, "html") == 0)
+        	mime_type = "text/html";
+      else if (strcmp(file_ext, "htm") == 0)
+        	mime_type = "text/htm";
+      else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
+        	mime_type = "image/jpeg";
+      else if (strcmp(file_ext, "png") == 0)
+        	mime_type = "image/png";
+      else if (strcmp(file_ext, "gif") == 0)
+          mime_type = "image/gif";
+      else if (strcmp(file_ext, "txt") == 0)
+        	mime_type = "text/txt";
+    }
+    else
+      mime_type = "text/html";
 
     char content_type_str[50];
     sprintf(content_type_str, "Content-Type: %s\n", mime_type);
@@ -219,7 +223,7 @@ int main(int argc, char *argv[])
     strcat(format_str, "Expires: 0\n");
     sprintf(response, format_str, date_text, last_modified, attr.st_size);
 
-    char err_format_str[512] = "HTTP/1.0 200 OK\n";
+    char err_format_str[512] = "HTTP/1.0 404 Not Found\n";
     strcat(err_format_str, "Date: %s\n");
     strcat(err_format_str, "Server: localhost\n");
     strcat(err_format_str, "MIME-version: 1.0\n");
