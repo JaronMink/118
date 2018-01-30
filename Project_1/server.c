@@ -15,6 +15,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 
 void error(char *msg)
 {
@@ -184,6 +185,8 @@ int main(int argc, char *argv[])
       	    break;
       	  }
       }
+    for (int i = 0; i < strlen(file_ext); i++)
+      file_ext[i] = tolower(file_ext[i]);
 
     char response[1024];
     char date_text[512];
