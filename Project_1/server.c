@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
       	    break;
       	  }
 	}
-      for (int i = 0; i < strlen(file_ext); i++)
+      for (int i = 0; file_index != NULL && i < strlen(file_ext); i++)
 	file_ext[i] = tolower(file_ext[i]);
       
       char response[1024];
