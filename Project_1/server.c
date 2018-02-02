@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
       //read client's message
       while((n = read(newsockfd, buffer, 511)) == 0);
       if (n < 0) error("ERROR reading from socket");
-      printf("Recieved Message:\n%s\n", buffer);
+      printf("Received Message:\n%s\n", buffer);
 
       char file_path[256];
 
