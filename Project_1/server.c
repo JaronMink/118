@@ -137,30 +137,13 @@ int main(int argc, char *argv[])
 
     	    if (i == 0) // header line
     	      {
-          		if (j == 0){
-          	    if (strcmp("GET", word) == 0)
-          	      {
-
-          	      }
-          	    else
-          	      {
-
-          	      }
-          		}
           		if (j == 1){
           		  strcpy(file_path, word);
-          		}
-          		if (j == 2){
-          		  if (strcmp ("HTTP/1.0", word) != 0)
-          		    {
-          		      //error("ERROR only supports HTTP 1.0.");
-          		      //close(newsockfd);
-          		      //close(sockfd);
-          		    }
           		}
           	}
           }
         }
+        // convert all browser's "%20"s into normal spaces
         char file_path_spaces[256] = {0};
         for (unsigned int i = 0; i < strlen(file_path); i++) {
         	char three_chars[256];
@@ -177,6 +160,7 @@ int main(int argc, char *argv[])
           }
         }
 
+      // get the file extension if it exists
       char* file_ext = NULL;
       char* file_index = file_path_spaces+1;
       for (unsigned int i = 0; i < strlen(file_index); i++)
@@ -187,9 +171,12 @@ int main(int argc, char *argv[])
           	    break;
           	  }
     	}
+
+      // file extension is case insensitive, so use all lowercase
       for (unsigned int i = 0; file_ext != NULL && i < strlen(file_ext); i++)
 	       file_ext[i] = tolower(file_ext[i]);
 
+      // create our HTTP response using format strings
       char response[1024];
       char date_text[512];
       time_t now = time(0);
@@ -228,6 +215,7 @@ int main(int argc, char *argv[])
       strcat(format_str, "Expires: 0\n");
       sprintf(response, format_str, date_text, last_modified, attr.st_size);
 
+      // create an HTTP response in case of 404 error
       char err_format_str[512] = "HTTP/1.0 404 Not Found\n";
       strcat(err_format_str, "Date: %s\n");
       strcat(err_format_str, "Server: localhost\n");
@@ -238,7 +226,6 @@ int main(int argc, char *argv[])
       char err_response[1024];
       sprintf(err_response, err_format_str, date_text, date_text);
 
-      //fprintf(stderr, "%s", file_index);
       int requestedFD;
       if((requestedFD = open(file_index, O_RDONLY)) < 0) {
 	       send404Error(newsockfd, err_response);
