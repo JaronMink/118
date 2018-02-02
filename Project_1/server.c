@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
       memset(buffer, 0, 512);  // reset memory
 
       //read client's message
-      n = read(newsockfd, buffer, 511);
+      while((n = read(newsockfd, buffer, 511)) == 0);
       if (n < 0) error("ERROR reading from socket");
       printf("Recieved Message:\n%s\n", buffer);
 
