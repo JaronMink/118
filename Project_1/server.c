@@ -33,7 +33,7 @@ void readFileContent(int fileFD, char** content, int* contentLen) {
   char* fileStr = (char*) malloc(sizeof(char) * fileLen);
 
   int bytesTotal = 0;
-  int bytesRead;
+  int bytesRead = 0;
   while((bytesRead = read(fileFD, (fileStr + bytesTotal), fileLen - bytesRead)) > 0) {
     bytesTotal += bytesRead;
   }
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
       //read client's message
       n = read(newsockfd, buffer, 511);
       if (n < 0) error("ERROR reading from socket");
-      printf("Here is the message: %s\n", buffer);
+      printf("Recieved Message:\n%s\n", buffer);
 
       char file_path[256];
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
           }
         }
         char file_path_spaces[256] = {0};
-        for (int i = 0; i < strlen(file_path); i++) {
+        for (unsigned int i = 0; i < strlen(file_path); i++) {
         	char three_chars[256];
         	strcpy(three_chars, file_path+i);
         	three_chars[3] = '\0';
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
       char* file_ext = NULL;
       char* file_index = file_path_spaces+1;
-      for (int i = 0; i < strlen(file_index); i++)
+      for (unsigned int i = 0; i < strlen(file_index); i++)
     	{
           	if (file_index[i] == '.')
           	  {
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
           	    break;
           	  }
     	}
-      for (int i = 0; file_ext != NULL && i < strlen(file_ext); i++)
+      for (unsigned int i = 0; file_ext != NULL && i < strlen(file_ext); i++)
 	       file_ext[i] = tolower(file_ext[i]);
 
       char response[1024];
@@ -204,7 +204,7 @@ int main(int argc, char *argv[])
       strcat(format_str, "Server: localhost\n");
       strcat(format_str, "MIME-version: 1.0\n");
       strcat(format_str, "Last-Modified: %s\n");
-      char* mime_type;
+      char* mime_type = NULL;
       if (file_ext != NULL) {
       	if (strcmp(file_ext, "html") == 0)
       	  mime_type = "text/html";
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
       char err_response[1024];
       sprintf(err_response, err_format_str, date_text, date_text);
 
-      fprintf(stderr, "%s", file_index);
+      //fprintf(stderr, "%s", file_index);
       int requestedFD;
       if((requestedFD = open(file_index, O_RDONLY)) < 0) {
 	       send404Error(newsockfd, err_response);
