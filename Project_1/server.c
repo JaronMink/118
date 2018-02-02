@@ -102,20 +102,20 @@ int main(int argc, char *argv[])
       newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
       if (newsockfd < 0)
-	error("ERROR on accept");
-      
+	      error("ERROR on accept");
+
       int n;
       char buffer[512];
-      
+
       memset(buffer, 0, 512);  // reset memory
-      
+
       //read client's message
       n = read(newsockfd, buffer, 511);
       if (n < 0) error("ERROR reading from socket");
       printf("Here is the message: %s\n", buffer);
-      
+
       char file_path[256];
-      
+
       // tokenize to get every spaced word
       char *saveptr_line, *saveptr_word;
       char *line, *word;
@@ -124,72 +124,72 @@ int main(int argc, char *argv[])
       line_tok[1] = 0;
       char word_tok[2] = " ";
       word_tok[1] = 0;
-      
+
       for (int i = 0; ; i++, request_lines = NULL)
-	{
-	  line = strtok_r(request_lines, line_tok, &saveptr_line);
-	  if (line == NULL)
-	    break;
-	  for (int j = 0; ; j++, line = NULL) {
-	    word = strtok_r(line, word_tok, &saveptr_word);
-	    if (word == NULL)
-	      break;
-	    
-	    if (i == 0) // header line
-	      {
-		if (j == 0){
-      	    if (strcmp("GET", word) == 0)
-      	      {
-		
-      	      }
-      	    else
-      	      {
-		
-      	      }
-		}
-		if (j == 1){
-		  strcpy(file_path, word);
-		}
-		if (j == 2){
-		  if (strcmp ("HTTP/1.0", word) != 0)
-		    {
-		      //error("ERROR only supports HTTP 1.0.");
-		      //close(newsockfd);
-		      //close(sockfd);
-		    }
-		}
-	      }
-	  }
-	}
-      char file_path_spaces[256] = {0};
-      for (int i = 0; i < strlen(file_path); i++) {
-	char three_chars[256];
-	strcpy(three_chars, file_path+i);
-	three_chars[3] = '\0';
-	if (strcmp(three_chars, "%20") == 0) {
-	  i += 2;
-	  strcat(file_path_spaces, " ");
-	}
-      else {
-      	char non_space_char[2];
-      	sprintf(non_space_char, "%c", file_path[i]);
-      	strcat(file_path_spaces, non_space_char);
-      }
-      }
-      
+    	{
+    	  line = strtok_r(request_lines, line_tok, &saveptr_line);
+    	  if (line == NULL)
+    	    break;
+    	  for (int j = 0; ; j++, line = NULL) {
+    	    word = strtok_r(line, word_tok, &saveptr_word);
+    	    if (word == NULL)
+    	      break;
+
+    	    if (i == 0) // header line
+    	      {
+          		if (j == 0){
+          	    if (strcmp("GET", word) == 0)
+          	      {
+
+          	      }
+          	    else
+          	      {
+
+          	      }
+          		}
+          		if (j == 1){
+          		  strcpy(file_path, word);
+          		}
+          		if (j == 2){
+          		  if (strcmp ("HTTP/1.0", word) != 0)
+          		    {
+          		      //error("ERROR only supports HTTP 1.0.");
+          		      //close(newsockfd);
+          		      //close(sockfd);
+          		    }
+          		}
+          	}
+          }
+        }
+        char file_path_spaces[256] = {0};
+        for (int i = 0; i < strlen(file_path); i++) {
+        	char three_chars[256];
+        	strcpy(three_chars, file_path+i);
+        	three_chars[3] = '\0';
+        	if (strcmp(three_chars, "%20") == 0) {
+        	  i += 2;
+        	  strcat(file_path_spaces, " ");
+        	}
+          else {
+          	char non_space_char[2];
+          	sprintf(non_space_char, "%c", file_path[i]);
+          	strcat(file_path_spaces, non_space_char);
+          }
+        }
+
       char* file_ext = NULL;
       char* file_index = file_path_spaces+1;
       for (int i = 0; i < strlen(file_index); i++)
-	{
-      	if (file_index[i] == '.')
-      	  {
-      	    file_ext = file_index+i+1;
-      	    break;
-      	  }
-	}
-      for (int i = 0; file_index != NULL && i < strlen(file_ext); i++)
-	file_ext[i] = tolower(file_ext[i]);
-      
+    	{
+          	if (file_index[i] == '.')
+          	  {
+          	    file_ext = file_index+i+1;
+          	    break;
+          	  }
+    	}
+      for (int i = 0; file_ext != NULL && i < strlen(file_ext); i++)
+	       file_ext[i] = tolower(file_ext[i]);
+
       char response[1024];
       char date_text[512];
       time_t now = time(0);
@@ -206,28 +206,28 @@ int main(int argc, char *argv[])
       strcat(format_str, "Last-Modified: %s\n");
       char* mime_type;
       if (file_ext != NULL) {
-	if (strcmp(file_ext, "html") == 0)
-	  mime_type = "text/html";
-	else if (strcmp(file_ext, "htm") == 0)
-	  mime_type = "text/htm";
-	else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
-	  mime_type = "image/jpeg";
-	else if (strcmp(file_ext, "png") == 0)
-	  mime_type = "image/png";
-	else if (strcmp(file_ext, "gif") == 0)
-          mime_type = "image/gif";
-	else if (strcmp(file_ext, "txt") == 0)
-	  mime_type = "text/txt";
-      }
+      	if (strcmp(file_ext, "html") == 0)
+      	  mime_type = "text/html";
+      	else if (strcmp(file_ext, "htm") == 0)
+      	  mime_type = "text/htm";
+      	else if (strcmp(file_ext, "jpg") == 0 || strcmp(file_ext, "jpeg") == 0)
+      	  mime_type = "image/jpeg";
+      	else if (strcmp(file_ext, "png") == 0)
+      	  mime_type = "image/png";
+      	else if (strcmp(file_ext, "gif") == 0)
+                mime_type = "image/gif";
+      	else if (strcmp(file_ext, "txt") == 0)
+      	  mime_type = "text/txt";
+            }
       else
-	mime_type = "text/html";
-      
+	     mime_type = "text/html";
+
       char content_type_str[50];
       sprintf(content_type_str, "Content-Type: %s\n", mime_type);
       strcat(format_str, content_type_str);
       strcat(format_str, "Expires: 0\n");
       sprintf(response, format_str, date_text, last_modified, attr.st_size);
-      
+
       char err_format_str[512] = "HTTP/1.0 404 Not Found\n";
       strcat(err_format_str, "Date: %s\n");
       strcat(err_format_str, "Server: localhost\n");
@@ -237,21 +237,21 @@ int main(int argc, char *argv[])
       strcat(err_format_str, "Expires: 0\n");
       char err_response[1024];
       sprintf(err_response, err_format_str, date_text, date_text);
-      
+
       fprintf(stderr, "%s", file_index);
       int requestedFD;
       if((requestedFD = open(file_index, O_RDONLY)) < 0) {
-	send404Error(newsockfd, err_response);
+	       send404Error(newsockfd, err_response);
       } else {
-	sendFileContent(newsockfd, requestedFD, response);
+	       sendFileContent(newsockfd, requestedFD, response);
       }
-      
+
       //reply to client
       if (n < 0) error("ERROR writing to socket");
-      
+
       close(newsockfd);  // close client connection
     }
-    
+
     close(sockfd);
     return 0;
 }
