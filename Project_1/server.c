@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 	      }
 	  }
 	}
-      char file_path_spaces[256];
+      char file_path_spaces[256] = {0};
       for (int i = 0; i < strlen(file_path); i++) {
 	char three_chars[256];
 	strcpy(three_chars, file_path+i);
@@ -238,6 +238,7 @@ int main(int argc, char *argv[])
       char err_response[1024];
       sprintf(err_response, err_format_str, date_text, date_text);
       
+      fprintf(stderr, "%s", file_index);
       int requestedFD;
       if((requestedFD = open(file_index, O_RDONLY)) < 0) {
 	send404Error(newsockfd, err_response);
