@@ -15,7 +15,7 @@ class JPP {
  public:
   JPP(int domain, int type, int protocol); //like socket defintion
   int setsockopt(int level, int optname, const void *optval, socklen_t optlen);
-  int bind(const struct sockaddr *addr, socklen_t addrelen);
+  int bind(const struct sockaddr *addr, socklen_t addrlen);
   int listen(int backlog);
   int accept(struct sockaddr *addr, socklen_t * addrlen);
   int connect(const struct sockaddr *addr, socklen_t addrlen);
@@ -39,7 +39,7 @@ class JPP {
   class Packer {
   public:
     //store data to be send
-    void store(const char* str, size_t len);
+    ssize_t store(const char* str, size_t len);
     //create a packet of total size len
     char* create_packet(size_t len);
   
@@ -86,6 +86,6 @@ class JPP {
   Packer mPacker;
   Sender mSender;
   Receiver mReceiver;
-
+  int mSockfd;
 }
 #endif
