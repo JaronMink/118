@@ -58,16 +58,55 @@ JPP private
 Packer public 
 ****/
 void Packer::store(const char* str, size_t len) {
-  
+  bufLen+=len; 
+  bufSS.write(str, len);
 }
-char* Packer::create_packet(size_t len){
+//read into buf and return size of packet
+size_t Packer::create_packet(char* buf, size_t len){
+  size_t dataLen = len - headerLen;
+  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr
+    return NULL;
+  }
 
+  char* body = malloc(sizeof(char)*dataLen);
+  bufSS.read(body, dataLen);
+  size_t bytesRead = bufSS.gcount();
+  if(bytesRead <= 0) {
+    cerr << "Packer: No bytes to read from packer\n";
+    return NULL;
+  }
+
+  char* header = create_header()
+  
 }
 
 /****
 Packer private
 ****/
+char* Packer::createHeader(int32_t packet_length, int16_t sequence_number, int16_t acknowledgement_num, int16_t receiver_window, bool isACK, bool isFIN, bool isSYN){ //size_t sequenceNum, bool isACK, size_t ackNum, bool isFIN, size_t rcwn, size_t receiverWindow, size_t totalSize) {
+  char* header = malloc(sizeof(char)*12); //96 bit header
+  int16_t flags = 0;
+  if(isACK){
+    flags = flags & (0x1<<15); //flag is 15th bit
+  }
+  if(isFIN) {
+    flags = flags &(0x1<<14); //flag is 14th bit
+  }
+  if (isSYN) {
+    flags = flags &(0x1<<13); //flag is 13th bit
+  }
+  //add contents to packet
+  header[0] = packet_length;
+  header[4] = sequence_number;
+  header[6] = acknowledgement_num;
+  header[8] = receiver_window;
+  header[10] = flags;
 
+  return header;
+}
+size_t Packer::size() {
+  return bufLen;
+}
 char* Packer::setup_packet(const char* str, size_t len){
 
 }

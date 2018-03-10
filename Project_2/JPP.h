@@ -9,6 +9,8 @@ used in same way as UDP or TCP socket
 #include<stdlib.h>
 #include<netinet/in.h>
 #include<string.h>
+#include<sstream>
+
 using namespace std;
 
 class JPP {
@@ -46,7 +48,9 @@ class JPP {
   private:
     //given x bytes of data, add a header to it
     char* setup_packet(const char* str, size_t len);
-    
+    sstream bufSS;
+    size_t bufLen;
+    size_t headerLen = sizeof(char)*12; //96 bit header
   };
   /**
   Used to send and retransmit data if necessary. Will receive packets from Packer and put into queue to send. Will keep account of packets until ACK has been received for the specific packet.   
@@ -89,3 +93,17 @@ class JPP {
   int mSockfd;
 }
 #endif
+
+
+/**
+Max packet size = 1024 bytes
+window size = 5120 bytes
+max sequence num = 30720
+retransmission time = 500ms
+
+HEADER SPECS -96 bits total (12 bytes)
+
+DataLen(32bits),
+seqNum(16bits), ackNum(16bits)
+rcwn(16bits),ACK(1bit),fin(1bit),Syn(1bit),unused(13bits)
+**/
