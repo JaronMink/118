@@ -109,11 +109,12 @@ char* JJP::Packer::create_header(uint32_t packet_length, uint16_t sequence_numbe
     flags = flags &(0x1<<13); //flag is 13th bit
   }
   //add contents to packet
-  header[0] = packet_length;
-  header[4] = sequence_number;
-  header[6] = acknowledgement_num;
-  header[8] = receiver_window;
-  header[10] = flags;
+
+  memmove(header, (char*)&packet_length, 4);
+  memmove(header+4,(char*)&sequence_number, 2);
+  memmove(header+6,(char*)&acknowledgement_num, 2);
+  memmove(header+8,(char*)&receiver_window, 2);
+  memmove(header+10,(char*)&flags, 2);
 
   return header;
 }
