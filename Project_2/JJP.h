@@ -38,19 +38,19 @@ class JJP {
    **/
   class Packer {
   public:
+    Packer();
     //store data to be send
-    ssize_t store(const char* str, size_t len);
+    size_t store(const char* str, size_t len);
     //create a packet of total size len, sets a pointer buf to packet and returns size of it
     size_t create_data_packet(char* buf, uint32_t len, uint16_t sequence_number);
   
   private:
     //given x bytes of data, add a header to it
-    char* setup_packet(const char* str, size_t len);
     char* create_header(uint32_t packet_length, uint16_t sequence_number, uint16_t acknowledgement_num, uint16_t receiver_window, bool isACK, bool isFIN, bool isSYN);
     size_t size();
     std::stringstream bufSS;
     size_t bufLen;
-    size_t headerLen = sizeof(char)*12; //96 bit header
+    static const size_t headerLen = sizeof(char)*12; //96 bit header
   };
   /**
   Used to send and retransmit data if necessary. Will receive packets from Packer and put into queue to send. Will keep account of packets until ACK has been received for the specific packet.   

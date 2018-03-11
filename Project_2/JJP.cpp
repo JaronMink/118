@@ -59,7 +59,12 @@ JJP private
 /****
 Packer public 
 ****/
-ssize_t JJP::Packer::store(const char* str, size_t len) {
+JJP::Packer::Packer() {
+  bufLen = 0;
+}
+
+
+size_t JJP::Packer::store(const char* str, size_t len) {
   bufLen+=len; 
   bufSS.write(str, len);
   return len; //assume we wrote the whole thing
@@ -74,14 +79,18 @@ size_t JJP::Packer::create_data_packet(char* buf, uint32_t len, uint16_t sequenc
   char* body = (char*)malloc(sizeof(char)*dataLen);
   bufSS.read(body, dataLen);
   size_t bytesRead = bufSS.gcount();
+  uint32_t totalPacketSize = bytesRead + headerLen;
   if(bytesRead <= 0) {
     std::cout << "Packer: No bytes to read from packer\n";
     return 0;
   }
 
-  char* header = create_header(len, sequence_number, (uint16_t) 0, (uint16_t) 0, false, false, false);
+  char* header = create_header(totalPacketSize, sequence_number, (uint16_t) 0, (uint16_t) 0, false, false, false);
   
-  //char* packet = malloc
+  char* packet = (char*) malloc(sizeof(char)*totalPacketSize);
+  memmove(packet, header, sizeof(char)*12);
+  memmove(packet + 12, body, sizeof(char)*bytesRead);
+  return totalPacketSize;
 }
 
 /****
@@ -110,9 +119,6 @@ char* JJP::Packer::create_header(uint32_t packet_length, uint16_t sequence_numbe
 }
 size_t JJP::Packer::size() {
   return bufLen;
-}
-char* JJP::Packer::setup_packet(const char* str, size_t len){
-
 }
 
 /****
