@@ -70,7 +70,7 @@ size_t JJP::Packer::store(const char* str, size_t len) {
   return len; //assume we wrote the whole thing
 }
 //read into buf and return size of packet
-size_t Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
+size_t JJP::Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
   size_t dataLen = len - headerLen;
   if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or pa\
 cket is too big return a nullptr                                                              

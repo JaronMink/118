@@ -42,7 +42,7 @@ class JJP {
     //store data to be send
     size_t store(const char* str, size_t len);
     //create a packet of total size len, sets a pointer buf to packet and returns size of it
-    size_t create_data_packet(char* buf, uint32_t len, uint16_t sequence_number);
+    size_t create_data_packet(char** buf, uint32_t len, uint16_t sequence_number);
   
   private:
     //given x bytes of data, add a header to it
