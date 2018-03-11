@@ -70,26 +70,32 @@ size_t JJP::Packer::store(const char* str, size_t len) {
   return len; //assume we wrote the whole thing
 }
 //read into buf and return size of packet
-size_t JJP::Packer::create_data_packet(char* buf, uint32_t len, uint16_t sequence_number){
+size_t Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
   size_t dataLen = len - headerLen;
-  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr
-    return 0;
+  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or pa\
+cket is too big return a nullptr                                                              
+  return 0;
   }
 
   char* body = (char*)malloc(sizeof(char)*dataLen);
   bufSS.read(body, dataLen);
   size_t bytesRead = bufSS.gcount();
+  bufLen -= bytesRead;
   uint32_t totalPacketSize = bytesRead + headerLen;
   if(bytesRead <= 0) {
     std::cout << "Packer: No bytes to read from packer\n";
     return 0;
   }
 
-  char* header = create_header(totalPacketSize, sequence_number, (uint16_t) 0, (uint16_t) 0, false, false, false);
-  
+  char* header = create_header(totalPacketSize, sequence_number, (uint16_t) 0, (uint16_t) 0, \
+			       false, false, false);
+
   char* packet = (char*) malloc(sizeof(char)*totalPacketSize);
   memmove(packet, header, sizeof(char)*12);
   memmove(packet + 12, body, sizeof(char)*bytesRead);
+  *buf = packet;
+  free(body);
+  free(header);
   return totalPacketSize;
 }
 
