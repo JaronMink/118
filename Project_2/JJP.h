@@ -66,11 +66,11 @@ class JJP {
     char* updated_buf_ptr();
     
     char m_buf[5120];
-    char* buf;
-    char* ack; 
-    char* next; 
-    int cwnd;
-    int rwnd;
+    char* BUF; // ACK + min(rwnd, cwnd)
+    char* ACK; //last Acked byte
+    char* NEXT; //last sent byte
+    size_t cwnd; //5120 bytes usually
+    size_t rwnd; //0-5120 bytes
   };
   
   /**

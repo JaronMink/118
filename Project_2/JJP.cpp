@@ -72,8 +72,7 @@ size_t JJP::Packer::store(const char* str, size_t len) {
 //read into buf and return size of packet
 size_t JJP::Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
   size_t dataLen = len - headerLen;
-  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or pa\
-cket is too big return a nullptr                                                              
+  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr                 
   return 0;
   }
 
@@ -132,10 +131,10 @@ size_t JJP::Packer::size() {
 Sender public
 ****/
 size_t JJP::Sender::get_avaliable_space(){
-
+  return (size_t)BUF - (size_t)NEXT;
 }
 size_t JJP::Sender::send(char* packet, size_t packet_len) {
-
+  
 }
 
 /****
@@ -146,7 +145,13 @@ size_t JJP::Sender::send_packet(char* packet, size_t packet_len){
 }
 
 char* JJP::Sender::updated_buf_ptr(){
-
+  size_t minThreshold = 5120;
+  if(cwnd < rwnd) {
+    minThreshold = cwnd;
+  } else {
+    minThreshold = rwnd;
+  }
+  return ACK + minThreshold;
 }
 
 /****
