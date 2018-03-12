@@ -10,6 +10,7 @@ used in same way as UDP or TCP socket
 #include<netinet/in.h>
 #include<string.h>
 #include<sstream>
+#include<queue>
 
 class JJP {
  public:
@@ -22,7 +23,7 @@ class JJP {
 
   ssize_t write(const void *buf, size_t nbytes);
   ssize_t read(void *buf, size_t nbytes);
-  
+
  private:
   /*
   class JJP_Packet {
@@ -31,7 +32,7 @@ class JJP {
     size();
     isACK();
     getPacketNum();
-    
+
     }*/ //don't know if we need this.
   /**
    Used to store data and form packets to be sent when requested by the sender
@@ -43,7 +44,7 @@ class JJP {
     size_t store(const char* str, size_t len);
     //create a packet of total size len, sets a pointer buf to packet and returns size of it
     size_t create_data_packet(char** buf, uint32_t len, uint16_t sequence_number);
-  
+
   private:
     //given x bytes of data, add a header to it
     char* create_header(uint32_t packet_length, uint16_t sequence_number, uint16_t acknowledgement_num, uint16_t receiver_window, bool isACK, bool isFIN, bool isSYN);
@@ -53,7 +54,7 @@ class JJP {
     static const size_t headerLen = sizeof(char)*12; //96 bit header
   };
   /**
-  Used to send and retransmit data if necessary. Will receive packets from Packer and put into queue to send. Will keep account of packets until ACK has been received for the specific packet.   
+  Used to send and retransmit data if necessary. Will receive packets from Packer and put into queue to send. Will keep account of packets until ACK has been received for the specific packet.
    **/
   class Sender {
   public:
@@ -64,7 +65,7 @@ class JJP {
   private:
     size_t send_packet(char* packet, size_t packet_len);
     char* updated_buf_ptr();
-    
+
     char m_buf[5120];
     char* BUF; // ACK + min(rwnd, cwnd)
     char* ACK; //last Acked byte
@@ -72,31 +73,50 @@ class JJP {
     size_t cwnd; //5120 bytes usually
     size_t rwnd; //0-5120 bytes
   };
-  
-  /**
-   Used to turn packets back into bytes. Returns if packet is valid   
-   **/
- 
-  class Receiver{
-  public:
-    Receiver(); //init packet num
-    int receive_packet(); //bool returns if valid data
-    //if data, send ACK (telegraph to JJP that we received data, ie return true)
-    //if ACK, notify sender that packet has been successfully acked
-    //if data
-    //put into temporary buffer (update avaliable space)
-    
-    size_t read(void *buf, size_t nbytes); //read from stored data
-    //read from sstring, either up to nbytes or x bytes. return x bytes.
-    size_t get_avaliable_space();
-    //(5120) total space in bufer - sum of packet size in temp storage
-  private:
-    //update_temporary_storage //transfer valid data from temp storage to sstream
 
-    //next expected packet, init to 0
-    uint16_t expected_packet_num;
-  };
-  
+  /**
+   Used to turn packets back into bytes. Returns if packet is valid
+   **/
+
+   class Receiver{
+   public:
+     Receiver(); //init packet num
+     // returns -1 if invalid data, 0 if valid data, 1 if ACK
+     int receive_packet(char* packet, size_t packet_len, uint16_t &acknowledgement_num, uint16_t &receiver_window);
+     //if data, send ACK (telegraph to JJP that we received data, ie return true)
+     //if ACK, notify sender that packet has been successfully acked
+     //if data
+     //put into temporary buffer (update avaliable space)
+
+     size_t read(void *buf, size_t nbytes); //read from stored data
+     //read from sstring, either up to nbytes or x bytes. return x bytes.
+     size_t get_avaliable_space();
+     //(5120) total space in bufer - sum of packet size in temp storage
+   private:
+     //update_temporary_storage //transfer valid data from temp storage to sstream
+     struct packetPair
+     {
+         uint16_t seq_num;
+         char* packet;
+         size_t packet_len;
+
+         packetPair(uint16_t givenSeqNum, char* givenPacket, size_t givenPacketLen)  {
+           seq_num = givenSeqNum;
+           packet = givenPacket;
+           packet_len = givenPacketLen;
+         }
+
+         bool operator<(const struct packetPair& other) const
+         {  return seq_num < other.seq_num; }
+     };
+
+     //next expected packet, init to 0
+     uint16_t expected_packet_num;
+     std::stringstream bufSS;
+     std::priority_queue<packetPair> storage_queue;
+     size_t used_space;
+   };
+
   Packer mPacker;
   Sender mSender;
   Receiver mReceiver;

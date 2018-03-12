@@ -39,7 +39,7 @@ int JJP::connect(const struct sockaddr *addr, socklen_t addrlen){
   int retVal = ::connect(mSockfd, addr, addrlen);
   ///
   //todo create new thread that constantly reads and writes from socket and does stuff
-  /// 
+  ///
   return retVal;
 }
 
@@ -49,7 +49,7 @@ ssize_t JJP::write(const void *buf, size_t nbytes) {
 
 ssize_t JJP::read(void *buf, size_t nbytes) {
   return mReceiver.read(buf, nbytes);
-} 
+}
 
 
 /****
@@ -57,7 +57,7 @@ JJP private
 ****/
 
 /****
-Packer public 
+Packer public
 ****/
 JJP::Packer::Packer() {
   bufLen = 0;
@@ -65,14 +65,14 @@ JJP::Packer::Packer() {
 
 
 size_t JJP::Packer::store(const char* str, size_t len) {
-  bufLen+=len; 
+  bufLen+=len;
   bufSS.write(str, len);
   return len; //assume we wrote the whole thing
 }
 //read into buf and return size of packet
 size_t JJP::Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
   size_t dataLen = len - headerLen;
-  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr                 
+  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr
   return 0;
   }
 
@@ -103,7 +103,7 @@ Packer private
 ****/
 char* JJP::Packer::create_header(uint32_t packet_length, uint16_t sequence_number, uint16_t acknowledgement_num, uint16_t receiver_window, bool isACK, bool isFIN, bool isSYN){ //size_t sequenceNum, bool isACK, size_t ackNum, bool isFIN, size_t rcwn, size_t receiverWindow, size_t totalSize) {
   char* header = (char *) malloc(sizeof(char)*12); //96 bit header
-  
+
 int16_t flags = 0;
   if(isACK){
     flags = flags | (0x1<<15); //flag is 15th bit
@@ -135,7 +135,7 @@ size_t JJP::Sender::get_avaliable_space(){
   return (size_t)BUF - (size_t)NEXT;
 }
 size_t JJP::Sender::send(char* packet, size_t packet_len) {
-  
+
 }
 
 void JJP::Sender::notify_ACK(uint16_t seq_num) {
@@ -164,19 +164,61 @@ char* JJP::Sender::updated_buf_ptr(){
 Receiver public
  ****/
 JJP::Receiver::Receiver() {
-
+  expected_packet_num = 0;
+  used_space = 0;
 }
 
-int JJP::Receiver::receive_packet() {
+int JJP::Receiver::receive_packet(char* packet, size_t packet_len, uint16_t &acknowledgement_num, uint16_t &receiver_window) {
+  //if data, send ACK (telegraph to JJP that we received data, ie return true)
+  //if ACK, notify sender that packet has been successfully acked
+  //if data
+  //put into temporary buffer (update avaliable space)
+  uint32_t packet_length;
+  uint16_t sequence_number;
+  bool isACK, isFIN, isSYN;
+  int16_t flags = 0;
 
+  char* header = packet;
+
+  memmove((char*)&packet_length, header, 4);
+  memmove((char*)&sequence_number, header+4, 2);
+  memmove((char*)&acknowledgement_num, header+6, 2);
+  memmove((char*)&receiver_window, header+8, 2);
+  memmove((char*)&flags, header+10, 2);
+
+  isACK = flags & (0x1<<15);
+  isFIN = flags & (0x1<<14);
+  isSYN = flags & (0x1<<13);
+
+  int ret_flag = 0;
+
+  if (isACK || isFIN)
+    ret_flag = 1;
+
+  packetPair pPair(sequence_number, packet, packet_len);
+
+  if (get_avaliable_space() > 0)
+  {
+    storage_queue.push(pPair);
+    used_space += packet_len;
+  }
+
+  while (!storage_queue.empty() && storage_queue.top().seq_num == expected_packet_num) {
+    packetPair currPair = storage_queue.top();
+    storage_queue.pop();
+    bufSS.write(currPair.packet, currPair.packet_len);
+  }
+
+  return ret_flag;
 }
 
 size_t JJP::Receiver::read(void *buf, size_t nbytes){
-
+  bufSS.read((char*)buf, nbytes);
+  return nbytes;
 }
 
 size_t JJP::Receiver::get_avaliable_space(){
-
+  return 5120 - used_space;
 }
 
 /****
