@@ -206,7 +206,9 @@ int JJP::Receiver::receive_packet(char* packet, size_t packet_len, uint16_t &ack
   while (!storage_queue.empty() && storage_queue.top().seq_num == expected_packet_num) {
     packetPair currPair = storage_queue.top();
     storage_queue.pop();
+    used_space -= currPair.packet_len;
     bufSS.write(currPair.packet, currPair.packet_len);
+    expected_packet_num = (expected_packet_num + currPair.packet_len) % 30720;
   }
 
   return ret_flag;
@@ -214,7 +216,7 @@ int JJP::Receiver::receive_packet(char* packet, size_t packet_len, uint16_t &ack
 
 size_t JJP::Receiver::read(void *buf, size_t nbytes){
   bufSS.read((char*)buf, nbytes);
-  return nbytes;
+  return bufSS.gcount();
 }
 
 size_t JJP::Receiver::get_avaliable_space(){
