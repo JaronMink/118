@@ -1,4 +1,4 @@
-
+#include <unistd.h>
 #include <stdio.h>
 #include <iostream>
 #include <sys/socket.h>
@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <list>
 #include "JJP.h"
 
 /****
@@ -132,32 +133,52 @@ size_t JJP::Packer::size() {
 Sender public
 ****/
 size_t JJP::Sender::get_avaliable_space(){
-  return (size_t)BUF - (size_t)NEXT;
+  if(max_buf_size() < next_byte) {
+    std::cerr << "error, next_byte greater than max_buf_size\n";
+    exit(1);
+  }
+  return (max_buf_size() - next_byte);
 }
-size_t JJP::Sender::send(char* packet, size_t packet_len) {
 
-}
 
 void JJP::Sender::notify_ACK(uint16_t seq_num) {
 
 }
 
 
-/****
-Sender private
-****/
-size_t JJP::Sender::send_packet(char* packet, size_t packet_len){
 
+JJP::Sender::Sender() {
+  next_byte = 0;
+  cwnd = 5120;
+  rwnd = 5120;
 }
 
-char* JJP::Sender::updated_buf_ptr(){
+size_t JJP::Sender::send(char* packet, size_t packet_len){
+  if(((int)get_avaliable_space() - (int) packet_len) < 0) { //if we don't have enough space to hold packet, do nothing
+    return 0;
+  }
+  //write to socket
+  ::write(mSockfd, packet, packet_len);
+  //store in object
+  PacketObj new_packet_object(packet, packet_len);
+  packet_buffer.push_back(new_packet_object);
+  next_byte += packet_len;
+  //set up alarm for res
+  return packet_len;
+  
+}
+/***
+Sender Private
+ ***/
+
+size_t JJP::Sender::max_buf_size(){
   size_t minThreshold = 5120;
   if(cwnd < rwnd) {
     minThreshold = cwnd;
   } else {
     minThreshold = rwnd;
   }
-  return ACK + minThreshold;
+  return minThreshold;
 }
 
 /****
