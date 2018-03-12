@@ -103,7 +103,8 @@ Packer private
 ****/
 char* JJP::Packer::create_header(uint32_t packet_length, uint16_t sequence_number, uint16_t acknowledgement_num, uint16_t receiver_window, bool isACK, bool isFIN, bool isSYN){ //size_t sequenceNum, bool isACK, size_t ackNum, bool isFIN, size_t rcwn, size_t receiverWindow, size_t totalSize) {
   char* header = (char *) malloc(sizeof(char)*12); //96 bit header
-  int16_t flags = 0;
+  
+int16_t flags = 0;
   if(isACK){
     flags = flags | (0x1<<15); //flag is 15th bit
   }
@@ -137,6 +138,11 @@ size_t JJP::Sender::send(char* packet, size_t packet_len) {
   
 }
 
+void JJP::Sender::notify_ACK(uint16_t seq_num) {
+
+}
+
+
 /****
 Sender private
 ****/
@@ -161,7 +167,7 @@ JJP::Receiver::Receiver() {
 
 }
 
-bool JJP::Receiver::receive_packet() {
+int JJP::Receiver::receive_packet() {
 
 }
 
