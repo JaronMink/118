@@ -154,7 +154,7 @@ JJP::Sender::Sender() {
 }
 
 size_t JJP::Sender::send(char* packet, size_t packet_len){
-  if(((int)get_avaliable_space() - (int) packet_len) < 0) { //if we don't have enough space to hold packet, do nothing
+  if(((long)get_avaliable_space() - (long) packet_len) < 0) { //if we don't have enough space to hold packet, do nothing
     return 0;
   }
   //write to socket

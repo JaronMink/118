@@ -13,6 +13,7 @@ used in same way as UDP or TCP socket
 #include <sstream>
 #include <queue>
 
+
 class JJP {
  public:
   JJP(int domain, int type, int protocol); //like socket defintion
@@ -26,6 +27,19 @@ class JJP {
   ssize_t read(void *buf, size_t nbytes);
 
  private:
+  /**
+     thread psuedo code:
+        read_from_UDP_and_translate_to_packet
+	process_packet
+	if_ack
+	  notify_sender
+	
+	get_avaliable_space
+	create_packet_with_len
+	send_packet
+   **/
+
+
   /*
   class JJP_Packet {
   public:
@@ -135,6 +149,7 @@ class JJP {
      };
 
      //next expected packet, init to 0
+     int mSockfd = -1;
      uint16_t expected_packet_num;
      std::stringstream bufSS;
      std::priority_queue<packetPair> storage_queue;
