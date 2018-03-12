@@ -105,13 +105,13 @@ char* JJP::Packer::create_header(uint32_t packet_length, uint16_t sequence_numbe
   char* header = (char *) malloc(sizeof(char)*12); //96 bit header
   int16_t flags = 0;
   if(isACK){
-    flags = flags & (0x1<<15); //flag is 15th bit
+    flags = flags | (0x1<<15); //flag is 15th bit
   }
   if(isFIN) {
-    flags = flags &(0x1<<14); //flag is 14th bit
+    flags = flags | (0x1<<14); //flag is 14th bit
   }
   if (isSYN) {
-    flags = flags &(0x1<<13); //flag is 13th bit
+    flags = flags | (0x1<<13); //flag is 13th bit
   }
   //add contents to packet
 

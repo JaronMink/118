@@ -60,7 +60,7 @@ class JJP {
     //Sender();
     size_t get_avaliable_space();
     size_t send(char* packet, size_t packet_len);
-  
+    void notify_ACK(uint16_t seq_num);
   private:
     size_t send_packet(char* packet, size_t packet_len);
     char* updated_buf_ptr();
@@ -79,12 +79,22 @@ class JJP {
  
   class Receiver{
   public:
-    Receiver();
-    bool receive_packet(); //bool returns if valid
-    size_t read(void *buf, size_t nbytes); //read from stored data
-    size_t get_avaliable_space();
-  private:
+    Receiver(); //init packet num
+    int receive_packet(); //bool returns if valid data
+    //if data, send ACK (telegraph to JJP that we received data, ie return true)
+    //if ACK, notify sender that packet has been successfully acked
+    //if data
+    //put into temporary buffer (update avaliable space)
     
+    size_t read(void *buf, size_t nbytes); //read from stored data
+    //read from sstring, either up to nbytes or x bytes. return x bytes.
+    size_t get_avaliable_space();
+    //(5120) total space in bufer - sum of packet size in temp storage
+  private:
+    //update_temporary_storage //transfer valid data from temp storage to sstream
+
+    //next expected packet, init to 0
+    uint16_t expected_packet_num;
   };
   
   Packer mPacker;
