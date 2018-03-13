@@ -170,8 +170,7 @@ size_t JJP::Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequen
     return 0;
   }
 
-  char* header = create_header(totalPacketSize, sequence_number, (uint16_t) 0, (uint16_t) 0, \
-			       false, false, false);
+  char* header = create_header(totalPacketSize, sequence_number, (uint16_t) 0, (uint16_t) 0, false, false, false);
 
   char* packet = (char*) malloc(sizeof(char)*totalPacketSize);
   memmove(packet, header, sizeof(char)*12);
@@ -223,9 +222,40 @@ size_t JJP::Sender::get_avaliable_space(){
   return (max_buf_size() - next_byte);
 }
 
+/*
 
+ */
+size_t JJP::Packer::create_FIN(char** packet, uint16_t seq_num) {
+  *packet = create_header(sizeof(char)*12, seq_num, (uint16_t) 0, rwnd, false, true, false);
+  return (sizeof(char)*12);
+}
+size_t JJP::Packer::create_ACK(char** packet, uint16_t seq_num) {
+  *packet = create_header(sizeof(char)*12, seq_num, (uint16_t) 0, rwnd, true, false, false);
+  return (sizeof(char)*12);
+}
+size_t JJP::Packer::create_SYN(char** packet, uint16_t seq_num) {
+  *packet = create_header(sizeof(char)*12, seq_num, (uint16_t) 0, rwnd, false, false, true);
+  return (sizeof(char)*12);
+}
+
+size_t JJP::Packer::create_update(char** packet, uint16_t seq_num) {
+  *packet = create_header(sizeof(char)*12, seq_num, (uint16_t) 0, rwnd, false, false, false);
+  return (sizeof(char)*12);
+}
+
+//go through all packets and resend expired ones
+void JJP::Sender::resend_expired_packets() { 
+  for(std::list<PacketObj>::iterator it = packet_buffer.begin(); it != packet_buffer.end(); it++) {
+    if(packet_has_timed_out(*it)) {
+      send(it->packet, it->packet_len, it->sequence_num );
+    }
+  }
+} 
+
+
+//set isACK for PacketObj that matches and move up window as much as we can
 void JJP::Sender::notify_ACK(uint16_t seq_num) {
-
+  
 }
 
 
@@ -238,16 +268,18 @@ JJP::Sender::Sender() {
   mSockfd = -1;
 }
 
-size_t JJP::Sender::send(char* packet, size_t packet_len){
+size_t JJP::Sender::send(char* packet, size_t packet_len, uint16_t seq_num){
   if(((long)get_avaliable_space() - (long) packet_len) < 0) { //if we don't have enough space to hold packet, do nothing
     return 0;
   }
   //write to socket
   ::write(mSockfd, packet, packet_len);
   //store in object
-  PacketObj new_packet_object(packet, packet_len);
+  PacketObj new_packet_object(packet, packet_len, seq_num);
   packet_buffer.push_back(new_packet_object);
   next_byte += packet_len;
+
+  
   //set up alarm for res
   return packet_len;
 
@@ -276,6 +308,10 @@ JJP::Receiver::Receiver() {
 }
 
 int JJP::Receiver::receive_packet(char* packet, size_t packet_len, uint16_t &acknowledgement_num, uint16_t &receiver_window) {
+  //if data, send ACK (telegraph to JJP that we received data, ie return true)
+  //if ACK, notify sender that packet has been successfully acked
+  //if data
+  //put into temporary buffer (update avaliable space)
   uint32_t packet_length;
   uint16_t sequence_number;
   bool isACK, isFIN, isSYN;

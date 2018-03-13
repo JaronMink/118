@@ -12,7 +12,7 @@ used in same way as UDP or TCP socket
 #include <list>
 #include <sstream>
 #include <queue>
-
+#include <time.h>
 
 class JJP {
  public:
@@ -60,11 +60,16 @@ class JJP {
     size_t store(const char* str, size_t len);
     //create a packet of total size len, sets a pointer buf to packet and returns size of it
     size_t create_data_packet(char** buf, uint32_t len, uint16_t sequence_number);
-
+    size_t create_FIN(char** packet, uint16_t seq_num);
+    size_t create_ACK(char** packet, uint16_t seq_num);
+    size_t create_SYN(char** packet, uint16_t seq_num); 
+    size_t create_update(char** packet, uint16_t seq_num); 
+    void set_rwnd(size_t new_rwnd) {rwnd=new_rwnd;}
   private:
     //given x bytes of data, add a header to it
     char* create_header(uint32_t packet_length, uint16_t sequence_number, uint16_t acknowledgement_num, uint16_t receiver_window, bool isACK, bool isFIN, bool isSYN);
     size_t size();
+    size_t rwnd;
     std::stringstream bufSS;
     size_t bufLen;
     static const size_t headerLen = sizeof(char)*12; //96 bit header
@@ -76,8 +81,9 @@ class JJP {
   public:
     Sender();
     size_t get_avaliable_space();
-    size_t send(char* packet, size_t packet_len);
-    size_t sendUpdate(char * packet, size_t packet_len); //just to send updates when rwnd is 0
+    size_t send(char* packet, size_t packet_len, uint16_t seq_num);
+    size_t send_update(char * packet, size_t packet_len); //just to send updates when rwnd is 0
+    void resend_expired_packets();
     void set_sockfd(int sockfd) {mSockfd = sockfd;}
     void update_cwnd(size_t new_wnd) {cwnd = new_wnd;}
     void update_rwnd(size_t new_wnd) {rwnd = new_wnd;}
@@ -85,23 +91,50 @@ class JJP {
   private:
     // size_t send_packet(char* packet, size_t packet_len);
     size_t max_buf_size();
+<<<<<<< Updated upstream
 
+=======
+    
+    
+>>>>>>> Stashed changes
     class PacketObj {
     public:
-      PacketObj(char* pack, size_t pack_len) {
+      PacketObj(char* pack, size_t pack_len, uint16_t seq_num) {
+	sequence_num = seq_num;
 	packet = pack;
 	packet_len = pack_len;
 	isAcked = false;
+	time(&sent_time);
       }
+<<<<<<< Updated upstream
 
+=======
+      time_t sent_time;
+      uint16_t sequence_num;
+>>>>>>> Stashed changes
       char* packet;
       size_t packet_len;
       bool isAcked;
     };
+<<<<<<< Updated upstream
 
     std::list<PacketObj> packet_buffer;
     //size_t max_size;
     int mSockfd;
+=======
+    bool packet_has_timed_out(PacketObj packet_obj) {
+      time_t now = time(0);
+      if(difftime(now, packet_obj.sent_time)*100 > 500) {
+	return true;
+      }
+      return false;
+    }
+
+    std::list<PacketObj> packet_buffer;
+    //size_t max_size;
+    int mSockfd = -1;
+    const double timeout_ms = 500;
+>>>>>>> Stashed changes
     size_t next_byte;
     //char m_buf[5120];
     //char* BUF; // ACK + min(rwnd, cwnd)
