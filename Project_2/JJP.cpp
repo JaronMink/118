@@ -7,7 +7,19 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <list>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>   // definitions of a number of data types used in socket.h and netinet/in.h
+#include <sys/socket.h>  // definitions of structures needed for sockets, e.g. sockaddr
+#include <sys/stat.h>    // structures for stat
+#include <netinet/in.h>  // constants and structures needed for internet domain addresses, e.g. sockaddr_in
 #include "JJP.h"
+
+void error(const char *msg)
+{
+  perror(msg);
+  exit(1);
+}
 
 /****
 JJP public
@@ -28,12 +40,83 @@ int JJP::listen(int backlog){
   return ::listen(mSockfd, backlog);
 }
 
+void JJP::readFileContent(int fileFD, char** content, int* contentLen) {
+  struct stat st;
+  if(fstat(fileFD, &st) < 0) {
+    error("ERROT: cannot read requested files stats");
+  }
+
+  int fileLen = st.st_size; //byte size of file
+  char* fileStr = (char*) malloc(sizeof(char) * fileLen);
+
+  int bytesTotal = 0;
+  int bytesRead = 0;
+  while((bytesRead = ::read(fileFD, (fileStr + bytesTotal), fileLen - bytesRead)) > 0) {
+    bytesTotal += bytesRead;
+  }
+  if(bytesRead < 0) {
+    error("ERROR: cannot read from specified file");
+    }
+
+  //return contents and length
+  *content = fileStr;
+  *contentLen = fileLen;
+  return;
+}
+
 int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
-  int retVal = ::accept(mSockfd, addr, addrlen);
-  ///
-  //todo create new thread that constantly reads and writes from socket and does stuff
-  ///
-  return retVal;
+  int newsockfd = ::accept(mSockfd, addr, addrlen);
+  if (newsockfd < 0)
+    error("ERROR on accept");
+
+  // "The client will first send a message to the server which includes the name of the file requested."
+  int n;
+  size_t bytesRead = 0;
+  char buffer[1024];
+  memset(buffer, 0, 1024);  // reset memory
+
+  //read client's message
+  while((n = ::read(newsockfd, buffer, 1023)) == 0)
+    bytesRead += n;
+  if (n < 0) error("ERROR reading from socket");
+
+  char* file_path = buffer;
+  char* fileContent = NULL;
+  int fileLen = -1;
+  int requestedFD;
+  if((requestedFD = open(file_path, O_RDONLY)) < 0) {
+    readFileContent(requestedFD, &fileContent, &fileLen);
+  }
+
+  while (1) {
+    bytesRead = 0;
+    uint16_t ackNum, receiveWindow;
+    char buffer[1024];
+
+    memset(buffer, 0, 1024);  // reset memory
+
+    //read client's message
+    while((n = ::read(newsockfd, buffer, 1023)) == 0)
+      bytesRead += n;
+    if (n < 0) error("ERROR reading from socket");
+
+    int isACKorFIN = mReceiver.receive_packet(buffer, bytesRead, ackNum, receiveWindow);
+    printf("Receiving packet %d\n", ackNum);
+
+    if (isACKorFIN)
+      {}//mSender.notify_ACK(
+
+    size_t available_space = mSender.get_avaliable_space();
+    if (available_space > 0) {
+      mPacker.store(fileContent, 1024 - 12);
+      fileContent += (1024 - 12);
+      char* packet[1024];
+      size_t packet_len = mPacker.create_data_packet(packet, 1024, 0);
+      mSender.send(*packet, packet_len);
+    }
+  }
+  ::close(newsockfd);
+  return newsockfd;
 }
 
 int JJP::connect(const struct sockaddr *addr, socklen_t addrlen){
@@ -73,7 +156,7 @@ size_t JJP::Packer::store(const char* str, size_t len) {
 //read into buf and return size of packet
 size_t JJP::Packer::create_data_packet(char** buf, uint32_t len, uint16_t sequence_number){
   size_t dataLen = len - headerLen;
-  if(dataLen <= 0 || dataLen > 1024) { //if we don't have enough space to put any data, or packet is too big return a nullptr
+  if(dataLen <= 0 || dataLen > (1024 - headerLen)) { //if we don't have enough space to put any data, or packet is too big return a nullptr
   return 0;
   }
 
@@ -151,6 +234,8 @@ JJP::Sender::Sender() {
   next_byte = 0;
   cwnd = 5120;
   rwnd = 5120;
+
+  mSockfd = -1;
 }
 
 size_t JJP::Sender::send(char* packet, size_t packet_len){
@@ -165,7 +250,7 @@ size_t JJP::Sender::send(char* packet, size_t packet_len){
   next_byte += packet_len;
   //set up alarm for res
   return packet_len;
-  
+
 }
 /***
 Sender Private
@@ -187,13 +272,10 @@ Receiver public
 JJP::Receiver::Receiver() {
   expected_packet_num = 0;
   used_space = 0;
+  mSockfd = -1;
 }
 
 int JJP::Receiver::receive_packet(char* packet, size_t packet_len, uint16_t &acknowledgement_num, uint16_t &receiver_window) {
-  //if data, send ACK (telegraph to JJP that we received data, ie return true)
-  //if ACK, notify sender that packet has been successfully acked
-  //if data
-  //put into temporary buffer (update avaliable space)
   uint32_t packet_length;
   uint16_t sequence_number;
   bool isACK, isFIN, isSYN;

@@ -22,6 +22,7 @@ class JJP {
   int listen(int backlog);
   int accept(struct sockaddr *addr, socklen_t * addrlen);
   int connect(const struct sockaddr *addr, socklen_t addrlen);
+  void readFileContent(int fileFD, char** content, int* contentLen);
 
   ssize_t write(const void *buf, size_t nbytes);
   ssize_t read(void *buf, size_t nbytes);
@@ -33,7 +34,7 @@ class JJP {
 	process_packet
 	if_ack
 	  notify_sender
-	
+
 	get_avaliable_space
 	create_packet_with_len
 	send_packet
@@ -84,7 +85,7 @@ class JJP {
   private:
     // size_t send_packet(char* packet, size_t packet_len);
     size_t max_buf_size();
-    
+
     class PacketObj {
     public:
       PacketObj(char* pack, size_t pack_len) {
@@ -92,15 +93,15 @@ class JJP {
 	packet_len = pack_len;
 	isAcked = false;
       }
-      
+
       char* packet;
       size_t packet_len;
       bool isAcked;
     };
-    
+
     std::list<PacketObj> packet_buffer;
     //size_t max_size;
-    int mSockfd = -1;
+    int mSockfd;
     size_t next_byte;
     //char m_buf[5120];
     //char* BUF; // ACK + min(rwnd, cwnd)
@@ -149,7 +150,7 @@ class JJP {
      };
 
      //next expected packet, init to 0
-     int mSockfd = -1;
+     int mSockfd;
      uint16_t expected_packet_num;
      std::stringstream bufSS;
      std::priority_queue<packetPair> storage_queue;
@@ -159,7 +160,7 @@ class JJP {
   Packer mPacker;
   Sender mSender;
   Receiver mReceiver;
-  int mSockfd=-1;
+  int mSockfd;
 };
 #endif
 
