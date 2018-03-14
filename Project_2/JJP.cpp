@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <list>
+#include <thread>
 #include "JJP.h"
 
 /****
@@ -32,9 +33,7 @@ int JJP::listen(int backlog){
   return ::listen(mSockfd, backlog);
 }
 
-int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
-  int newsockfd = ::accept(mSockfd, addr, addrlen);
-
+void JJP::processing_thread(int newsockfd) {
   while (1) {
     int n;
     size_t bytesRead = 0;
@@ -46,13 +45,13 @@ int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
     //read client's message
     while((n = ::read(newsockfd, buffer, 1023)) == 0)
       bytesRead += n;
-    //if (n < 0) error("ERROR reading from socket");
+    if (bytesRead > 0) {
+      int isACKorFIN = mReceiver.receive_packet(buffer, bytesRead, ackNum, receiveWindow);
+        printf("Receiving packet %d\n", ackNum);
 
-    int isACKorFIN = mReceiver.receive_packet(buffer, bytesRead, ackNum, receiveWindow);
-    printf("Receiving packet %d\n", ackNum);
-
-    if (isACKorFIN)
-      {}//mSender.notify_ACK(
+      if (isACKorFIN)
+        {}//mSender.notify_ACK(
+    }
 
     size_t available_space = mSender.get_avaliable_space();
     if (available_space > 0) {
@@ -62,6 +61,14 @@ int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
       mSender.send(*packet, packet_len, sequence_num);
     }
   }
+}
+
+int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
+  int newsockfd = ::accept(mSockfd, addr, addrlen);
+
+  std::thread process(&JJP::processing_thread, this, newsockfd);
+  // don't block, we must return the sockfd
+
   return newsockfd;
 }
 
