@@ -7,25 +7,17 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <list>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>   // definitions of a number of data types used in socket.h and netinet/in.h
-#include <sys/socket.h>  // definitions of structures needed for sockets, e.g. sockaddr
-#include <sys/stat.h>    // structures for stat
-#include <netinet/in.h>  // constants and structures needed for internet domain addresses, e.g. sockaddr_in
 #include "JJP.h"
-
-void error(const char *msg)
-{
-  perror(msg);
-  exit(1);
-}
 
 /****
 JJP public
 ****/
 JJP::JJP(int domain, int type, int protocol){
   mSockfd = ::socket(domain, type, protocol);
+}
+
+JJP::~JJP() {
+  close(mSockfd);
 }
 
 int JJP::setsockopt(int level, int optname, const void *optval, socklen_t optlen){
@@ -40,56 +32,12 @@ int JJP::listen(int backlog){
   return ::listen(mSockfd, backlog);
 }
 
-void JJP::readFileContent(int fileFD, char** content, int* contentLen) {
-  struct stat st;
-  if(fstat(fileFD, &st) < 0) {
-    error("ERROT: cannot read requested files stats");
-  }
-
-  int fileLen = st.st_size; //byte size of file
-  char* fileStr = (char*) malloc(sizeof(char) * fileLen);
-
-  int bytesTotal = 0;
-  int bytesRead = 0;
-  while((bytesRead = ::read(fileFD, (fileStr + bytesTotal), fileLen - bytesRead)) > 0) {
-    bytesTotal += bytesRead;
-  }
-  if(bytesRead < 0) {
-    error("ERROR: cannot read from specified file");
-    }
-
-  //return contents and length
-  *content = fileStr;
-  *contentLen = fileLen;
-  return;
-}
-
 int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
   int newsockfd = ::accept(mSockfd, addr, addrlen);
-  if (newsockfd < 0)
-    error("ERROR on accept");
-
-  // "The client will first send a message to the server which includes the name of the file requested."
-  int n;
-  size_t bytesRead = 0;
-  char buffer[1024];
-  memset(buffer, 0, 1024);  // reset memory
-
-  //read client's message
-  while((n = ::read(newsockfd, buffer, 1023)) == 0)
-    bytesRead += n;
-  if (n < 0) error("ERROR reading from socket");
-
-  char* file_path = buffer;
-  char* fileContent = NULL;
-  int fileLen = -1;
-  int requestedFD;
-  if((requestedFD = open(file_path, O_RDONLY)) < 0) {
-    readFileContent(requestedFD, &fileContent, &fileLen);
-  }
 
   while (1) {
-    bytesRead = 0;
+    int n;
+    size_t bytesRead = 0;
     uint16_t ackNum, receiveWindow;
     char buffer[1024];
 
@@ -98,7 +46,7 @@ int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
     //read client's message
     while((n = ::read(newsockfd, buffer, 1023)) == 0)
       bytesRead += n;
-    if (n < 0) error("ERROR reading from socket");
+    //if (n < 0) error("ERROR reading from socket");
 
     int isACKorFIN = mReceiver.receive_packet(buffer, bytesRead, ackNum, receiveWindow);
     printf("Receiving packet %d\n", ackNum);
@@ -108,14 +56,12 @@ int JJP::accept(struct sockaddr *addr, socklen_t * addrlen){
 
     size_t available_space = mSender.get_avaliable_space();
     if (available_space > 0) {
-      mPacker.store(fileContent, 1024 - 12);
-      fileContent += (1024 - 12);
       char* packet[1024];
-      size_t packet_len = mPacker.create_data_packet(packet, 1024, 0);
-      mSender.send(*packet, packet_len);
+      size_t sequence_num = 0;
+      size_t packet_len = mPacker.create_data_packet(packet, 1024, sequence_num);
+      mSender.send(*packet, packet_len, sequence_num);
     }
   }
-  ::close(newsockfd);
   return newsockfd;
 }
 
@@ -244,18 +190,18 @@ size_t JJP::Packer::create_update(char** packet, uint16_t seq_num) {
 }
 
 //go through all packets and resend expired ones
-void JJP::Sender::resend_expired_packets() { 
+void JJP::Sender::resend_expired_packets() {
   for(std::list<PacketObj>::iterator it = packet_buffer.begin(); it != packet_buffer.end(); it++) {
     if(packet_has_timed_out(*it)) {
       send(it->packet, it->packet_len, it->sequence_num );
     }
   }
-} 
+}
 
 
 //set isACK for PacketObj that matches and move up window as much as we can
 void JJP::Sender::notify_ACK(uint16_t seq_num) {
-  
+
 }
 
 
@@ -279,7 +225,7 @@ size_t JJP::Sender::send(char* packet, size_t packet_len, uint16_t seq_num){
   packet_buffer.push_back(new_packet_object);
   next_byte += packet_len;
 
-  
+
   //set up alarm for res
   return packet_len;
 

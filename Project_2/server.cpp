@@ -1,54 +1,41 @@
-using namespace std;
-class Packer {
-  public:
-    void store(const char* str, size_t len) {
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>   // definitions of a number of data types used in socket.h and netinet/in.h
+#include <sys/socket.h>  // definitions of structures needed for sockets, e.g. sockaddr
+#include <sys/stat.h>    // structures for stat
+#include <netinet/in.h>  // constants and structures needed for internet domain addresses, e.g. sockaddr_in
+#include "JJP.h"
 
-    }
+void error(const char *msg)
+{
+  perror(msg);
+  exit(1);
+}
 
-    vector<char> create_packet(size_t size) {
-
-    }
-  private:
-    vector<char> packet_setup(const char* str, size_t len) {
-
-    }
-
-  vector<char> m_buf;
-};
-
-class Sender {
-  public:
-    int get_available_space() {
-
-    }
-    void send() {
-
-    }
-
-  private:
-    void send_packet() {
-
-    }
-
-    void set_buf_ptr() {
-      buf = (min(cwnd + ack, rwnd + ack) % 5120 ) + m_buf;
-    }
-
-
-  char m_buf[5120];
-  char* buf = m_buf + 5120;
-  char* ack = m_buf;
-  char* next = m_buf;
-  int cwnd = 5120;
-  int rwnd = 5120;
-};
-
-class JJP {
-  int write(const char* str, size_t len) {
-
+void readFileContent(int fileFD, char** content, int* contentLen) {
+  struct stat st;
+  if(fstat(fileFD, &st) < 0) {
+    error("ERROT: cannot read requested files stats");
   }
 
-};
+  int fileLen = st.st_size; //byte size of file
+  char* fileStr = (char*) malloc(sizeof(char) * fileLen);
+
+  int bytesTotal = 0;
+  int bytesRead = 0;
+  while((bytesRead = read(fileFD, (fileStr + bytesTotal), fileLen - bytesRead)) > 0) {
+    bytesTotal += bytesRead;
+  }
+  if(bytesRead < 0) {
+    error("ERROR: cannot read from specified file");
+    }
+
+  //return contents and length
+  *content = fileStr;
+  *contentLen = fileLen;
+  return;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -61,8 +48,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    //while(1) {
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);  // create socket
+    JJP mJJP;
+    mJJP.socket(AF_INET, SOCK_DGRAM, 0);  // create socket
     if (sockfd < 0)
         error("ERROR opening socket");
     memset((char *) &serv_addr, 0, sizeof(serv_addr));   // reset memory
@@ -73,34 +60,39 @@ int main(int argc, char *argv[])
     serv_addr.sin_addr.s_addr = INADDR_ANY;
     serv_addr.sin_port = htons(portno);
 
-    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+    if (mJJP.bind((struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
         error("ERROR on binding");
 
-    listen(sockfd, 5);  // 5 simultaneous connection at most
+    mJJP.listen(5);  // 5 simultaneous connection at most
 
     //accept connections and process them
     while(1){
-      recvlen = recvfrom(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+      mJJP.accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
 
       if (newsockfd < 0)
 	      error("ERROR on accept");
 
       int n;
-      char buffer[512];
+      char buffer[1024];
 
-      memset(buffer, 0, 512);  // reset memory
+      memset(buffer, 0, 1024);  // reset memory
 
       //read client's message
-      while((n = read(newsockfd, buffer, 511)) == 0);
+      while((n = mJJP.read(buffer, 1023)) == 0);
       if (n < 0) error("ERROR reading from socket");
       printf("Received Message:\n%s\n", buffer);
 
       int requestedFD;
       if((requestedFD = open(file_index, O_RDONLY)) < 0) {
-	       send404Error(newsockfd, err_response);
-      } else {
-	       sendFileContent(newsockfd, requestedFD, response);
-      }
+          char* fileContent = NULL;
+          int fileLen = -1;
+          readFileContent(fileFD, &fileContent, &fileLen);
+          mJJP.write(fileContent, fileLen);
+        }
+        else {
+          char* error404Msg = "Error 404, resource not found";
+          mJJP.write(error404Msg, strlen(error404Msg));
+        }
 
       //reply to client
       if (n < 0) error("ERROR writing to socket");
@@ -108,6 +100,6 @@ int main(int argc, char *argv[])
       close(newsockfd);  // close client connection
     }
 
-    close(sockfd);
+    //close(sockfd); // taken care of by JJP destructor
     return 0;
 }

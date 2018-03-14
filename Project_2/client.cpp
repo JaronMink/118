@@ -11,13 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-class Receiver {
-
-
-  vector<char> m_buf;
-  int max_buf_size = 5120;
-};
-
 void error(char *msg)
 {
     perror(msg);
@@ -38,8 +31,9 @@ int main(int argc, char *argv[])
     }
 
     portno = atoi(argv[2]);
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);  // create a new socket
-    if (sockfd < 0)
+    JJP mJJP;
+
+    if (mJJP.socket(AF_INET, SOCK_STREAM, 0) < 0)  // create a new socket
         error("ERROR opening socket");
 
     server = gethostbyname(argv[1]);  // takes a string like "www.yahoo.com", and returns a struct hostent which contains information, as IP address, address type, the length of the addresses...
@@ -53,24 +47,24 @@ int main(int argc, char *argv[])
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(portno);
 
-    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) //establish a connection to the server
+    if (mJJP.connect((struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0) //establish a connection to the server
         error("ERROR connecting");
 
     printf("Please enter the message: ");
     memset(buffer,0, 256);
     fgets(buffer,255,stdin);  // read message
 
-    n = write(sockfd,buffer,strlen(buffer));  // write to the socket
+    n = mJJP.write(buffer,strlen(buffer));  // write to the socket
     if (n < 0)
          error("ERROR writing to socket");
 
     memset(buffer,0,256);
-    n = read(sockfd,buffer,255);  // read from the socket
+    n = mJJP.read(buffer,255);  // read from the socket
     if (n < 0)
          error("ERROR reading from socket");
     printf("%s\n",buffer);  // print server's response
 
-    close(sockfd);  // close socket
+    //close(sockfd);  // taken care of by JJP destructor
 
     return 0;
 }

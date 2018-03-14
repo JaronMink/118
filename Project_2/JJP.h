@@ -17,12 +17,12 @@ used in same way as UDP or TCP socket
 class JJP {
  public:
   JJP(int domain, int type, int protocol); //like socket defintion
+  ~JJP();
   int setsockopt(int level, int optname, const void *optval, socklen_t optlen);
   int bind(const struct sockaddr *addr, socklen_t addrlen);
   int listen(int backlog);
   int accept(struct sockaddr *addr, socklen_t * addrlen);
   int connect(const struct sockaddr *addr, socklen_t addrlen);
-  void readFileContent(int fileFD, char** content, int* contentLen);
 
   ssize_t write(const void *buf, size_t nbytes);
   ssize_t read(void *buf, size_t nbytes);
@@ -62,8 +62,8 @@ class JJP {
     size_t create_data_packet(char** buf, uint32_t len, uint16_t sequence_number);
     size_t create_FIN(char** packet, uint16_t seq_num);
     size_t create_ACK(char** packet, uint16_t seq_num);
-    size_t create_SYN(char** packet, uint16_t seq_num); 
-    size_t create_update(char** packet, uint16_t seq_num); 
+    size_t create_SYN(char** packet, uint16_t seq_num);
+    size_t create_update(char** packet, uint16_t seq_num);
     void set_rwnd(size_t new_rwnd) {rwnd=new_rwnd;}
   private:
     //given x bytes of data, add a header to it
@@ -91,12 +91,7 @@ class JJP {
   private:
     // size_t send_packet(char* packet, size_t packet_len);
     size_t max_buf_size();
-<<<<<<< Updated upstream
 
-=======
-    
-    
->>>>>>> Stashed changes
     class PacketObj {
     public:
       PacketObj(char* pack, size_t pack_len, uint16_t seq_num) {
@@ -106,22 +101,17 @@ class JJP {
 	isAcked = false;
 	time(&sent_time);
       }
-<<<<<<< Updated upstream
 
-=======
       time_t sent_time;
       uint16_t sequence_num;
->>>>>>> Stashed changes
       char* packet;
       size_t packet_len;
       bool isAcked;
     };
-<<<<<<< Updated upstream
 
     std::list<PacketObj> packet_buffer;
     //size_t max_size;
     int mSockfd;
-=======
     bool packet_has_timed_out(PacketObj packet_obj) {
       time_t now = time(0);
       if(difftime(now, packet_obj.sent_time)*100 > 500) {
@@ -130,11 +120,7 @@ class JJP {
       return false;
     }
 
-    std::list<PacketObj> packet_buffer;
-    //size_t max_size;
-    int mSockfd = -1;
     const double timeout_ms = 500;
->>>>>>> Stashed changes
     size_t next_byte;
     //char m_buf[5120];
     //char* BUF; // ACK + min(rwnd, cwnd)
