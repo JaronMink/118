@@ -206,8 +206,15 @@ void JJP::Sender::resend_expired_packets() {
 }
 
 
+
 //set isACK for PacketObj that matches and move up window as much as we can
 void JJP::Sender::notify_ACK(uint16_t seq_num) {
+  for(std::list<PacketObj>::iterator it = packet_buffer.begin(); it != packet_buffer.end(); it++) {
+    if(it->sequence_num == seq_num) {
+      it->isAcked = true;
+      return;
+    }
+  }
 
 }
 

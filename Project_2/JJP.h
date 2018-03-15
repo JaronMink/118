@@ -110,9 +110,6 @@ class JJP {
       bool isAcked;
     };
 
-    std::list<PacketObj> packet_buffer;
-    //size_t max_size;
-    int mSockfd;
     bool packet_has_timed_out(PacketObj packet_obj) {
       time_t now = time(0);
       if(difftime(now, packet_obj.sent_time)*100 > 500) {
@@ -121,7 +118,11 @@ class JJP {
       return false;
     }
 
+    std::list<PacketObj> packet_buffer;
+    //size_t max_size;
+    int mSockfd;
     const double timeout_ms = 500;
+
     size_t next_byte;
     //char m_buf[5120];
     //char* BUF; // ACK + min(rwnd, cwnd)
